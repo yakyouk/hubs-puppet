@@ -1,9 +1,11 @@
 
 "use strict";
 
-const g_headless = true;
-const spawnCnt = 5;
+const g_headless = true; // true will hide the bot-spawing windows - yopmail is not hidden in case a captcha is required
+const spawnCnt = 5; // number of bots to spawn
+// audio samples, can be empty
 const audioSamples = ["samples/sample000.mp3", "samples/sample001.mp3", "samples/sample002.mp3", "samples/sample003.mp3", "samples/sample004.mp3", "samples/sample005.mp3", "samples/sample006.mp3", "samples/sample007.mp3"]
+// movement samples
 const movementSamples = ["samples/bot-recording.json"]
 
 require("dotenv").config();
