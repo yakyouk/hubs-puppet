@@ -1,3 +1,4 @@
 node_modules
 .env
 /samples/*.mp3
+debug.log
