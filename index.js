@@ -1,8 +1,9 @@
 
 "use strict";
 
-const g_headless = true; // true will hide the bot-spawing windows - yopmail is not hidden in case a captcha is required
-const spawnCnt = 5; // number of bots to spawn
+const g_headless = false //true; // true will hide the bot-spawing windows - yopmail is not hidden in case a captcha is required
+const spawnCnt = 20; // number of bots to spawn, min 1
+const jitter = 1; // 0~1 spawnCnt * jitter gives the min number of bots 
 // audio samples, can be empty
 const audioSamples = ["samples/sample000.mp3", "samples/sample001.mp3", "samples/sample002.mp3", "samples/sample003.mp3", "samples/sample004.mp3", "samples/sample005.mp3", "samples/sample006.mp3", "samples/sample007.mp3"]
 // movement samples
@@ -12,6 +13,7 @@ require("dotenv").config();
 const hubsDomain = process.env.HUBS_DOMAIN
 const hubsSid = process.env.HUBS_SID
 const email = process.env.HUBS_EMAIL
+const startId = parseInt(process.env.HUBS_FIRSTID) || 0; //first bot id
 if (!hubsDomain || !hubsSid || !email) {
   console.error(`Please add these environment variables to .env file:
   HUBS_DOMAIN=hubs_external_domain
@@ -21,10 +23,10 @@ if (!hubsDomain || !hubsSid || !email) {
 }
 
 const queuer = require("./unbuf-promise-queue");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
-const inst = { min: Math.floor(spawnCnt * 0.8), max: spawnCnt }
+const inst = { min: Math.floor(spawnCnt * jitter) || 1, max: spawnCnt }
 const mainQueue = queuer(0);
 const emailQueue = queuer(1);
 process.setMaxListeners(40);
@@ -42,11 +44,13 @@ process.setMaxListeners(40);
 (async () => {
   //page array
   // const pages = new Map();
-  let accId = -1;
+  let accId0 = -1;
+  let browser;
   //main loop
   for (; ;) {
     //get and lock available slot
-    accId = (accId + 1) % inst.max;
+    accId0 = (accId0 + 1) % inst.max;
+    const accId = startId + accId0
     const accSid = "a" + accId.toString().padStart(4, "0")
     console.log(`MAIN: ${accSid}: slot ${await mainQueue.waitOne()} available`);
     let freeUpSlot;
@@ -61,10 +65,11 @@ process.setMaxListeners(40);
       err = 1;
       do {
         try {
-          page = await createPage(accSid);
+          page = await createPage(accSid, { browser });
+          // if (!browser) browser = page.browser()
           //do login
           console.log(`SLOT ${slot}: ${accSid}: login`);
-          await login(page, accSid);
+          // await login(page, accSid);
           /*
           //change display name
           page
@@ -111,6 +116,11 @@ process.setMaxListeners(40);
           //provide files for audio and data
           await Promise.all([
             page
+              .waitForSelector("a-scene", {
+                timeout: 70000,
+              })
+              .then((elh) => elh.evaluate(el => el.setAttribute("visible", false))),
+            page
               .waitForSelector("input[id='bot-audio-input']", {
                 timeout: 70000,
               })
@@ -141,11 +151,11 @@ process.setMaxListeners(40);
         }
         if (err === 6) {
           console.log(`SLOT ${slot}: ${accSid}: too many retries, give up`)
-          try { await page.browser().close() } catch (e) { }
+          try { await page/*.browser()*/.close() } catch (e) { }
           return
         }
       } while (err);
-      try { await page.browser().close() } catch (e) { }
+      try { await page/*.browser()*/.close() } catch (e) { }
       // pages.delete(accSid)
       // freeUpSlot();
     })().then(async () => {
@@ -324,7 +334,9 @@ async function createPage(context, options = {}) {
     browser = await puppeteer.launch({
       headless: options.headless,
       userDataDir: process.env.TMP + path.sep + context,
-      executablePath: "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      // executablePath: ".\\node_modules\\puppeteer\\.local-chromium\\win64-737027\\chrome-win\\chrome.exe",
+      args: [/*'--single-process',*/ '--disable-gpu'],
+      // ignoreDefaultArgs: ["--enable-features=NetworkService,NetworkServiceInProcess"]
     });
     page = await browser.newPage({ context });
     for (const p of await browser.pages()) {
