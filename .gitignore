@@ -1,4 +1,5 @@
 node_modules
 .env
 /samples/*.mp3
+!/samples/sample000.mp3
 debug.log

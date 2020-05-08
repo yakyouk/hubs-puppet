@@ -1,23 +1,27 @@
 "use strict";
-
-const g_headless = false; // true will hide the bot-spawing windows
+console.log(
+  "env: *HUBS_DOMAIN; *HUBS_SID; HUBS_EMAIL; HUBS_FIRSTID; HEADLESS=true/(false); AUTO_LOGIN=auto/manual/(disabled); SPAWN_COUNT=(2); JITTER=(1); AUDIO_SAMPLES=(samples/sample000.mp3)"
+);
+const g_headless = process.env.HEADLESS === "true"; // true will hide the bot-spawing windows. default: false
 // g_autoLogin: auto: will open a visible window and automate yopmail login - yopmail is not hidden in case a captcha is required
 //              manual: you need to open yopmail and click links
-//              disabled: does not check for login
-const g_autoLogin = "disabled";
-const spawnCnt = 2; // number of bots to spawn, min 1
-const jitter = 1; // 0~1 spawnCnt * jitter gives the min number of bots
-// audio samples, can be empty
-const audioSamples = [
-  "samples/sample000.mp3",
-  "samples/sample001.mp3",
-  "samples/sample002.mp3",
-  "samples/sample003.mp3",
-  "samples/sample004.mp3",
-  "samples/sample005.mp3",
-  "samples/sample006.mp3",
-  "samples/sample007.mp3",
-];
+//              disabled (default): does not check for login
+const g_autoLogin = process.env.AUTO_LOGIN;
+const spawnCnt = parseInt(process.env.SPAWN_COUNT) || 2; // number of bots to spawn, min 1
+const jitter = parseInt(process.env.JITTER) || 1; // 0~1 spawnCnt * jitter gives the min number of bots
+// audio samples
+const audioSamples = process.env.AUDIO_SAMPLES
+  ? process.env.AUDIO_SAMPLES.split(",")
+  : [
+      "samples/sample000.mp3",
+      // "samples/sample001.mp3",
+      // "samples/sample002.mp3",
+      // "samples/sample003.mp3",
+      // "samples/sample004.mp3",
+      // "samples/sample005.mp3",
+      // "samples/sample006.mp3",
+      // "samples/sample007.mp3",
+    ];
 // movement samples
 const movementSamples = ["samples/bot-recording.json"];
 
@@ -25,16 +29,19 @@ require("dotenv").config();
 const hubsDomain = process.env.HUBS_DOMAIN;
 const hubsSid = process.env.HUBS_SID;
 const email = process.env.HUBS_EMAIL;
-let startId = parseInt(process.env.HUBS_FIRSTID); //first bot id
+let startId = parseInt(process.env.HUBS_FIRSTID) || undefined; //first bot id
 if (!hubsDomain || !hubsSid) {
   console.error(
-    "Please provide env variables: HUBS_DOMAIN=hubs_external_domain ; HUBS_SID=hubs_room_id"
+    "Missing required env variables: HUBS_DOMAIN=hubs_external_domain ; HUBS_SID=hubs_room_id"
   );
   process.exit(1);
 }
-if (g_autoLogin !== "disabled" && (!email || startId === undefined)) {
+if (
+  (g_autoLogin === "auto" || g_autoLogin === "manual") &&
+  (!email || startId === undefined)
+) {
   console.error(
-    "Please provide env variables: HUBS_EMAIL=hubs_login_email ; HUBS_FIRSTID=first_bot_id_num"
+    "Login requires env variables: HUBS_EMAIL=hubs_login_email ; HUBS_FIRSTID=first_bot_id_num"
   );
   process.exit(1);
 }
@@ -86,7 +93,7 @@ process.setMaxListeners(40);
         try {
           page = await createPage(accSid, { browser });
           // if (!browser) browser = page.browser()
-          if (g_autoLogin !== "disabled") {
+          if (g_autoLogin === "auto" || g_autoLogin === "manual") {
             //do login
             console.log(`SLOT ${slot}: ${accSid}: login`);
             await login(page, accSid);
