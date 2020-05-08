@@ -54,18 +54,22 @@ const fs = require("fs");
 const inst = { min: Math.floor(spawnCnt * jitter) || 1, max: spawnCnt };
 const mainQueue = queuer(0);
 const emailQueue = queuer(1);
-process.setMaxListeners(40);
+process.setMaxListeners(60);
 // let browser
 
 //randomly change queue size between min and max
-(async () => {
-  for (;;) {
-    mainQueue.setSize(
-      inst.min + Math.floor(Math.random() * (inst.max - inst.min))
-    );
-    await new Promise((r) => setTimeout(r, 300000));
-  }
-})();
+if (jitter < 1) {
+  (async () => {
+    for (;;) {
+      mainQueue.setSize(
+        inst.min + Math.floor(Math.random() * (inst.max - inst.min))
+      );
+      await new Promise((r) => setTimeout(r, 300000));
+    }
+  })();
+} else {
+  mainQueue.setSize(inst.max);
+}
 
 (async () => {
   //page array
@@ -413,8 +417,13 @@ async function createPage(context, options = {}) {
     browser = await puppeteer.launch({
       headless: options.headless,
       userDataDir: process.env.TMP + path.sep + context,
-      // executablePath: ".\\node_modules\\puppeteer\\.local-chromium\\win64-737027\\chrome-win\\chrome.exe",
-      args: [/*'--single-process',*/ "--disable-gpu"],
+      args: [
+        //'--single-process',
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+      ],
       // ignoreDefaultArgs: ["--enable-features=NetworkService,NetworkServiceInProcess"]
     });
     page = await browser.newPage({ context });
