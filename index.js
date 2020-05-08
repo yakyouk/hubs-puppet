@@ -14,13 +14,13 @@ const audioSamples = process.env.AUDIO_SAMPLES
   ? process.env.AUDIO_SAMPLES.split(",")
   : [
       "samples/sample000.mp3",
-      // "samples/sample001.mp3",
-      // "samples/sample002.mp3",
-      // "samples/sample003.mp3",
-      // "samples/sample004.mp3",
-      // "samples/sample005.mp3",
-      // "samples/sample006.mp3",
-      // "samples/sample007.mp3",
+      "samples/sample001.mp3",
+      "samples/sample002.mp3",
+      "samples/sample003.mp3",
+      "samples/sample004.mp3",
+      "samples/sample005.mp3",
+      "samples/sample006.mp3",
+      "samples/sample007.mp3",
     ];
 // movement samples
 const movementSamples = ["samples/bot-recording.json"];
