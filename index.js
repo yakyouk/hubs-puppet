@@ -1,3 +1,6 @@
+// pass pid to orchestrator
+console.log(`/VAR:PID:${process.pid}`)
+
 "use strict";
 console.log(
   "env: *HUBS_DOMAIN; *HUBS_SID; HUBS_EMAIL; HUBS_FIRSTID; HEADLESS=true/(false); AUTO_LOGIN=auto/manual/(disabled); SPAWN_COUNT=(2); JITTER=(1); AUDIO_SAMPLES=(samples/sample000.mp3)"
@@ -174,6 +177,11 @@ if (jitter < 1) {
               ),
           ]);
           console.log(`SLOT ${slot}: ${accSid}: spawn OK`);
+          await new Promise(r=>setTimeout(r,30000))
+          console.log( `JANUS SERVER\\${hubsSid}\\${ await page.evaluate(
+            () =>
+              NAF.connection.adapter.serverUrl
+          )}`)
           //hang out for a while
           const waitUntil =
             Date.now() + 600000 + Math.floor(Math.random() * 300000);
