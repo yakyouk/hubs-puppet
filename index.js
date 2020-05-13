@@ -177,11 +177,11 @@ if (jitter < 1) {
               ),
           ]);
           console.log(`SLOT ${slot}: ${accSid}: spawn OK`);
-          await new Promise(r=>setTimeout(r,30000))
-          console.log( `JANUS SERVER\\${hubsSid}\\${ await page.evaluate(
-            () =>
-              NAF.connection.adapter.serverUrl
-          )}`)
+          // await new Promise(r=>setTimeout(r,30000))
+          // console.log( `JANUS SERVER\\${hubsSid}\\${ await page.evaluate(
+          //   () =>
+          //     NAF.connection.adapter.serverUrl
+          // )}`)
           //hang out for a while
           const waitUntil =
             Date.now() + 600000 + Math.floor(Math.random() * 300000);
