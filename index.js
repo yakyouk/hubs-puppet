@@ -149,7 +149,7 @@ if (jitter < 1) {
             })
             .catch((e) => {});
           //provide files for audio and data
-          Promise.race([
+          await Promise.race([
             page
               .waitForSelector("div[class='exited-panel']", {
                 timeout: 180000,
