@@ -145,36 +145,50 @@ if (jitter < 1) {
           console.log(`SLOT ${slot}: ${accSid}: spawn`);
           page
             .goto(`https://${hubsDomain}/${hubsSid}?bot=true&allow_multi`, {
-              timeout: 70000,
+              timeout: 200000,
             })
             .catch((e) => {});
           //provide files for audio and data
-          await Promise.all([
+          Promise.race([
             page
-              .waitForSelector("a-scene", {
-                timeout: 70000,
+              .waitForSelector("div[class='exited-panel']", {
+                timeout: 180000,
               })
-              .then((elh) =>
-                elh.evaluate((el) => el.setAttribute("visible", false))
-              ),
-            page
-              .waitForSelector("input[id='bot-audio-input']", {
-                timeout: 70000,
+              .then(() => {
+                throw new Error("Error: session ended unexpectedly while waiting for spawn");
               })
-              .then((elh) =>
-                elh.uploadFile(
-                  audioSamples[Math.floor(Math.random() * audioSamples.length)]
-                )
-              ),
-            page
-              .waitForSelector("input[id='bot-data-input']", { timeout: 70000 })
-              .then((elh) =>
-                elh.uploadFile(
-                  movementSamples[
-                    Math.floor(Math.random() * movementSamples.length)
-                  ]
-                )
-              ),
+              .catch((e) => {}),
+            Promise.all([
+              page
+                .waitForSelector("a-scene", {
+                  timeout: 180000,
+                })
+                .then((elh) =>
+                  elh.evaluate((el) => el.setAttribute("visible", false))
+                ),
+              page
+                .waitForSelector("input[id='bot-audio-input']", {
+                  timeout: 180000,
+                })
+                .then((elh) =>
+                  elh.uploadFile(
+                    audioSamples[
+                      Math.floor(Math.random() * audioSamples.length)
+                    ]
+                  )
+                ),
+              page
+                .waitForSelector("input[id='bot-data-input']", {
+                  timeout: 180000,
+                })
+                .then((elh) =>
+                  elh.uploadFile(
+                    movementSamples[
+                      Math.floor(Math.random() * movementSamples.length)
+                    ]
+                  )
+                ),
+            ]),
           ]);
           console.log(`SLOT ${slot}: ${accSid}: spawn OK`);
           // await new Promise(r=>setTimeout(r,30000))
