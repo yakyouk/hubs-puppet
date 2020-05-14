@@ -145,19 +145,21 @@ if (jitter < 1) {
           console.log(`SLOT ${slot}: ${accSid}: spawn`);
           page
             .goto(`https://${hubsDomain}/${hubsSid}?bot=true&allow_multi`, {
-              timeout: 200000,
+              timeout: 210000,
             })
             .catch((e) => {});
           //provide files for audio and data
           await Promise.race([
-            page
-              .waitForSelector("div[class='exited-panel']", {
-                timeout: 180000,
-              })
-              .then(() => {
-                throw new Error("Error: session ended unexpectedly while waiting for spawn");
-              })
-              .catch((e) => {}),
+            new Promise(async (r, R) => {
+              const res = await page
+                .waitForSelector("div[class='exited-panel']", {
+                  timeout: 200000,
+                })
+                .catch(() => {});
+              if (res)
+                R("Error: session ended unexpectedly while waiting for spawn");
+              else r();
+            }),
             Promise.all([
               page
                 .waitForSelector("a-scene", {
