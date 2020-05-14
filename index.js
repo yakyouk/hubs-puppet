@@ -1,7 +1,7 @@
 // pass pid to orchestrator
-console.log(`/VAR:PID:${process.pid}`)
+console.log(`/VAR:PID:${process.pid}`);
 
-"use strict";
+("use strict");
 console.log(
   "env: *HUBS_DOMAIN; *HUBS_SID; HUBS_EMAIL; HUBS_FIRSTID; HEADLESS=true/(false); AUTO_LOGIN=auto/manual/(disabled); SPAWN_COUNT=(2); JITTER=(1); AUDIO_SAMPLES=(samples/sample000.mp3)"
 );
@@ -185,6 +185,7 @@ if (jitter < 1) {
           //hang out for a while
           const waitUntil =
             Date.now() + 600000 + Math.floor(Math.random() * 300000);
+          let endNormal = true;
           do {
             if (
               await page
@@ -193,36 +194,36 @@ if (jitter < 1) {
                 })
                 .catch((e) => {})
             ) {
-              console.error(
-                `SLOT ${slot}: ${accSid}: session ended unexpectedly`
-              );
+              endNormal = false;
               break;
             }
           } while (Date.now() < waitUntil);
-          console.log(`SLOT ${slot}: ${accSid}: session ended`);
+          if (endNormal) console.log(`SLOT ${slot}: ${accSid}: session ended`);
+          else
+            console.error(
+              `SLOT ${slot}: ${accSid}: session ended unexpectedly`
+            );
           err = 0;
         } catch (e) {
           err++;
-          console.error(
-            `SLOT ${slot}: ${accSid}: error, retrying ${err}\nERROR${
-              e.name ? " " + e.name : ""
-            }: ${e.message}`
-          );
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-        if (err === 6) {
-          console.log(`SLOT ${slot}: ${accSid}: too many retries, give up`);
+          if (err < 6) {
+            console.error(
+              `SLOT ${slot}: ${accSid}: error, retrying ${err}\nERROR${
+                e.name ? " " + e.name : ""
+              }: ${e.message}`
+            );
+            await new Promise((r) => setTimeout(r, 1000));
+          } else {
+            console.log(`SLOT ${slot}: ${accSid}: too many retries, give up`);
+          }
+          return;
+        } finally {
           try {
             await page /*.browser()*/
               .close();
           } catch (e) {}
-          return;
         }
       } while (err);
-      try {
-        await page /*.browser()*/
-          .close();
-      } catch (e) {}
       // pages.delete(accSid)
       // freeUpSlot();
     })().then(async () => {
