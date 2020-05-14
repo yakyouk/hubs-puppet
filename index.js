@@ -93,10 +93,9 @@ if (jitter < 1) {
     const { slot } = await mainQueue.add(() => completionPromise);
     //start job
     (async () => {
-      let page;
-      let err;
-      err = 1;
+      let err = 1;
       do {
+        let page;
         try {
           page = await createPage(accSid, { browser });
           // if (!browser) browser = page.browser()
@@ -157,7 +156,7 @@ if (jitter < 1) {
                 })
                 .catch(() => {});
               if (res)
-                R("Error: session ended unexpectedly while waiting for spawn");
+                R("session ended while waiting for spawn");
               else r();
             }),
             Promise.all([
@@ -221,18 +220,17 @@ if (jitter < 1) {
             );
           err = 0;
         } catch (e) {
-          err++;
-          if (err < 6) {
+          // err++;
+          // if (err < 6) {
             console.error(
               `SLOT ${slot}: ${accSid}: error, retrying ${err}\nERROR${
                 e.name ? " " + e.name : ""
               }: ${e.message}`
             );
-            await new Promise((r) => setTimeout(r, 1000));
-          } else {
-            console.log(`SLOT ${slot}: ${accSid}: too many retries, give up`);
-          }
-          return;
+            await new Promise((r) => setTimeout(r, 5000));
+          // } else {
+          //   console.log(`SLOT ${slot}: ${accSid}: too many retries, give up`);
+          // }
         } finally {
           try {
             await page /*.browser()*/
