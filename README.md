@@ -5,9 +5,6 @@ To use:
 * add audio samples to the `/samples` folder and change audioSamples value in `index.js`
 * add a .env file with:
 ```
-env: *HUBS_DOMAIN; *HUBS_SID; HUBS_EMAIL; HUBS_FIRSTID; HEADLESS=true/(false); AUTO_LOGIN=auto/manual/(disabled);p3)"
-);
-
 HUBS_DOMAIN=hubs_external_domain (required)
 HUBS_SID=room_id (required)
 HUBS_EMAIL=hubs_account@email.com (required if AUTO_LOGIN)
