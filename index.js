@@ -199,13 +199,13 @@ if (jitter < 1) {
           // )}`)
           //hang out for a while
           const waitUntil =
-            Date.now() + 600000 + Math.floor(Math.random() * 300000);
+            Date.now() + 1500000 + Math.floor(Math.random() * 100000);
           let endNormal = true;
           do {
             if (
               await page
                 .waitForSelector("div[class='exited-panel']", {
-                  timeout: 15000,
+                  timeout: 4000,
                 })
                 .catch((e) => {})
             ) {
@@ -246,7 +246,7 @@ if (jitter < 1) {
     });
     //wait a bit before bringing in someone else
     await new Promise((r) =>
-      setTimeout(r, 1000 + Math.floor(Math.random() * 9000))
+      setTimeout(r, 1000 + Math.floor(Math.random() * 5000))
     );
   }
 })();
