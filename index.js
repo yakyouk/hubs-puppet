@@ -199,7 +199,7 @@ if (jitter < 1) {
           // )}`)
           //hang out for a while
           const waitUntil =
-            Date.now() + 1500000 + Math.floor(Math.random() * 100000);
+            Date.now() + 900000 + Math.floor(Math.random() * 600000);
           let endNormal = true;
           do {
             if (
