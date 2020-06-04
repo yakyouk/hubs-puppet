@@ -246,7 +246,7 @@ if (jitter < 1) {
     });
     //wait a bit before bringing in someone else
     await new Promise((r) =>
-      setTimeout(r, 1000 + Math.floor(Math.random() * 5000))
+      setTimeout(r, 5000 + Math.floor(Math.random() * 9000))
     );
   }
 })();
