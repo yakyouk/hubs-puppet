@@ -3,15 +3,17 @@ console.log(`/VAR:PID:${process.pid}`);
 
 ("use strict");
 console.log(
-  "env: *HUBS_DOMAIN; *HUBS_SID; HUBS_EMAIL; HUBS_FIRSTID; HEADLESS=true/(false); AUTO_LOGIN=auto/manual/(disabled); SPAWN_COUNT=(2); JITTER=(1); AUDIO_SAMPLES=(samples/sample000.mp3)"
+  "env: *HUBS_DOMAIN *HUBS_SID HUBS_EMAIL HUBS_FIRSTID HEADLESS=true/(false) AUTO_LOGIN=auto/manual/(disabled) CREDS=email1,token1;email2,token2 SPAWN_COUNT=(2) JITTER=(1) AUDIO_SAMPLES=(samples/sample000.mp3)"
 );
 const g_headless = process.env.HEADLESS === "true"; // true will hide the bot-spawing windows. default: false
-// g_autoLogin: auto: will open a visible window and automate yopmail login - yopmail is not hidden in case a captcha is required
+// AUTO_LOGIN: auto: will open a visible window and automate yopmail login - yopmail is not hidden in case a captcha is required
 //              manual: you need to open yopmail and click links
 //              disabled (default): does not check for login
-const g_autoLogin = process.env.AUTO_LOGIN;
+// note that this will use the same provided HUBS_EMAIL for every bot
+// if you need separate accounts, use CREDS instead
+const AUTO_LOGIN = process.env.AUTO_LOGIN;
 const spawnCnt = parseInt(process.env.SPAWN_COUNT) || 2; // number of bots to spawn, min 1
-const jitter = parseInt(process.env.JITTER) || 1; // 0~1 spawnCnt * jitter gives the min number of bots
+const jitter = parseFloat(process.env.JITTER) || 1.0; // 0~1 spawnCnt * jitter gives the min number of bots
 // audio samples
 const audioSamples = process.env.AUDIO_SAMPLES
   ? process.env.AUDIO_SAMPLES.split(",")
@@ -40,7 +42,7 @@ if (!hubsDomain || !hubsSid) {
   process.exit(1);
 }
 if (
-  (g_autoLogin === "auto" || g_autoLogin === "manual") &&
+  (AUTO_LOGIN === "auto" || AUTO_LOGIN === "manual") &&
   (!email || startId === undefined)
 ) {
   console.error(
@@ -49,7 +51,14 @@ if (
   process.exit(1);
 }
 startId = startId || 0;
-
+const creds =
+  process.env.CREDS &&
+  process.env.CREDS.replace(/;$/, "")
+    .split(";")
+    .map((c) => {
+      const [email, token] = c.split(",");
+      return { email, token };
+    });
 const queuer = require("./unbuf-promise-queue");
 const puppeteer = require("puppeteer");
 const path = require("path");
@@ -84,7 +93,7 @@ if (jitter < 1) {
     //get and lock available slot
     accId0 = (accId0 + 1) % inst.max;
     const accId = startId + accId0;
-    const accSid = "a" + accId.toString().padStart(4, "0");
+    const accSid = "" + accId.toString().padStart(4, "0");
     console.log(`MAIN: ${accSid}: slot ${await mainQueue.waitOne()} available`);
     let freeUpSlot;
     const completionPromise = new Promise((r) => {
@@ -99,46 +108,10 @@ if (jitter < 1) {
         try {
           page = await createPage(accSid, { browser });
           // if (!browser) browser = page.browser()
-          if (g_autoLogin === "auto" || g_autoLogin === "manual") {
+          if (AUTO_LOGIN === "auto" || AUTO_LOGIN === "manual") {
             //do login
             console.log(`SLOT ${slot}: ${accSid}: login`);
             await login(page, accSid);
-            /*
-          //change display name
-          page
-            .goto(`https://${hubsDomain}/${hubsSid}`, {
-              timeout: 70000,
-            })
-            .catch((e) => {});
-          await page
-            .waitForSelector("a-scene", { timeout: 40000 })
-            .then((elh) =>
-              elh.evaluate((el) => el.setAttribute("visible", false))
-            );
-          await page
-            .waitForSelector(
-              "button[class^='ui-root__presence-list-button__']",
-              {
-                timeout: 40000,
-              }
-            )
-            .then((elh) => elh.click());
-          await page
-            .waitForSelector("a[class^='presence-list__self__']", {
-              timeout: 40000,
-            })
-            .then((elh) => elh.click());
-          await page.waitForSelector("input[id='profile-entry-display-name']", {
-            timeout: 40000,
-          });
-          await page.focus("input[id='profile-entry-display-name']");
-          await page.keyboard.type(accSid);
-          await page.waitForSelector("input[class^='profile__form-submit__']", {
-            timeout: 40000,
-          });
-          await page.click("input[class^='profile__form-submit__']");
-          await new Promise((r) => setTimeout(r, 1000));
-        */
             console.log(`SLOT ${slot}: ${accSid}: login OK`);
           }
           console.log(`SLOT ${slot}: ${accSid}: spawn`);
@@ -147,6 +120,31 @@ if (jitter < 1) {
               timeout: 210000,
             })
             .catch((e) => {});
+          //set display name & creds
+          await page.waitForNavigation();
+          page.evaluate(
+            ({ sleep, displayName, email, token }) => {
+              (async () => {
+                const ob = {
+                  ...(email ? { credentials: { email, token } } : {}),
+                  profile: { displayName },
+                };
+                const t_o = 100000 / sleep;
+                for (let i = 0; i < t_o; i++) {
+                  if (typeof APP !== "undefined" && APP.store) {
+                    APP.store.update(ob);
+                    break;
+                  }
+                  await new Promise((r) => setTimeout(r, sleep));
+                }
+              })();
+            },
+            {
+              sleep: 20,
+              displayName: `Puppet-${accSid}`,
+              ...(creds ? { ...creds[accId0] } : {}),
+            }
+          );
           //provide files for audio and data
           await Promise.race([
             new Promise(async (r, R) => {
@@ -155,8 +153,7 @@ if (jitter < 1) {
                   timeout: 200000,
                 })
                 .catch(() => {});
-              if (res)
-                R("session ended while waiting for spawn");
+              if (res) R("session ended while waiting for spawn");
               else r();
             }),
             Promise.all([
@@ -222,12 +219,12 @@ if (jitter < 1) {
         } catch (e) {
           // err++;
           // if (err < 6) {
-            console.error(
-              `SLOT ${slot}: ${accSid}: error, retrying ${err}\nERROR${
-                e.name ? " " + e.name : ""
-              }: ${e.message}`
-            );
-            await new Promise((r) => setTimeout(r, 5000));
+          console.error(
+            `SLOT ${slot}: ${accSid}: error, retrying ${err}\nERROR${
+              e.name ? " " + e.name : ""
+            }: ${e.message}`
+          );
+          await new Promise((r) => setTimeout(r, 5000));
           // } else {
           //   console.log(`SLOT ${slot}: ${accSid}: too many retries, give up`);
           // }
@@ -262,7 +259,7 @@ async function login(page, accSid) {
     timeout: 40000,
   });
   //give time for login tag to update
-  await new Promise((r) => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, 5000));
   if (
     (await page
       .$("div[class^='index__sign-in__'] a span")
@@ -270,7 +267,7 @@ async function login(page, accSid) {
   )
     return;
   //not logged in
-  if (g_autoLogin === "auto") {
+  if (AUTO_LOGIN === "auto") {
     console.log(`EMAIL: ${accSid}: wait for slot`);
     await emailQueue
       .add(async () => {
