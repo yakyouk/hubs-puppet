@@ -121,6 +121,7 @@ if (JITTER < 1) {
               timeout: 210000,
             })
             .catch((e) => {});
+          await page.waitForNavigation();
           //wait for room assignment
           console.log("wait for assignment");
           await page.waitForNavigation();
