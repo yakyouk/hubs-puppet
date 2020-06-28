@@ -120,38 +120,32 @@ if (JITTER < 1) {
             .catch((e) => {});
           //set display name & creds
           await page.waitForNavigation();
-          page.evaluate(
-            ({
-              sleep,
-              // displayName,
-              email,
-              token,
-            }) => {
-              (async () => {
-                const t_o = 20000 / sleep;
-                for (let i = 0; i < t_o; i++) {
-                  if (typeof APP !== "undefined" && APP.store) {
-                    APP.store.update({
-                      ...(email ? { credentials: { email, token } } : {}),
-                      // profile: { displayName },
-                      activity: { hasChangedName: true },
-                    });
-                    break;
+          if (CREDS) {
+            page.evaluate(
+              ({ sleep, email, token }) => {
+                (async () => {
+                  const t_o = 20000 / sleep;
+                  for (let i = 0; i < t_o; i++) {
+                    if (
+                      typeof APP !== "undefined" &&
+                      APP.store &&
+                      APP.store.state
+                    ) {
+                      if (APP.store.state.credentials.token) break;
+                      APP.store.update({ credentials: { email, token } });
+                    }
+                    await new Promise((r) => setTimeout(r, sleep));
                   }
-                  await new Promise((r) => setTimeout(r, sleep));
-                }
-              })();
-            },
-            {
-              sleep: 20,
-              // displayName: `Puppet-${accSid}`,
-              ...(CREDS ? { ...CREDS[accId0] } : {}),
-            }
-          );
-          //wait for assignment redir
-          console.log("wait redir")
+                })();
+              },
+              {
+                sleep: 20,
+                ...CREDS[accId0],
+              }
+            );
+          }
+          //wait for room assignment
           await page.waitForNavigation();
-          console.log("redirect success")
           // //dirty trick to wait for assignment redir navigation
           // await new Promise(r=>setTimeout(r,20000))
           //provide files for audio and data
