@@ -122,7 +122,9 @@ if (JITTER < 1) {
             })
             .catch((e) => {});
           //wait for room assignment
+          console.log("wait for assignment");
           await page.waitForNavigation();
+          console.log("navigated to" + page.url());
           //provide files for audio and data
           await Promise.race([
             new Promise(async (r, R) => {
