@@ -51,21 +51,24 @@ if (
   process.exit(1);
 }
 HUBS_FIRSTID = HUBS_FIRSTID || 0;
-const CREDS =
-  process.env.CREDS &&
-  process.env.CREDS.replace(/;$/, "")
-    .split(";")
-    .map((c) => {
-      const [email, token] = c.split(",");
-      return { email, token };
-    });
+const inst = { min: Math.floor(SPAWN_COUNT * JITTER) || 1, max: SPAWN_COUNT };
+process.setMaxListeners(60);
+const CREDS = process.env.CREDS && {};
+if (CREDS) {
+  let accId0 = -1;
+  for (const c of process.env.CREDS.replace(/;$/, "").split(";")) {
+    accId0 = (accId0 + 1) % inst.max;
+    const accId = HUBS_FIRSTID + accId0;
+    const accSid = "" + accId.toString().padStart(4, "0");
+    const [email, token] = c.split(",");
+    CREDS[accSid] = { email, token };
+  }
+}
 const queuer = require("./unbuf-promise-queue");
 const puppeteer = require("puppeteer");
 const path = require("path");
-const inst = { min: Math.floor(SPAWN_COUNT * JITTER) || 1, max: SPAWN_COUNT };
 const mainQueue = queuer(0);
 const emailQueue = queuer(1);
-process.setMaxListeners(60);
 
 //randomly change queue size between min and max
 if (JITTER < 1) {
@@ -106,7 +109,7 @@ if (JITTER < 1) {
         try {
           page = await createPage(accSid, { browser });
           // if (!browser) browser = page.browser()
-          if (AUTO_LOGIN === "auto" || AUTO_LOGIN === "manual") {
+          if (AUTO_LOGIN === "auto" || AUTO_LOGIN === "manual" || CREDS) {
             //do login
             console.log(`SLOT ${slot}: ${accSid}: login`);
             await login(page, accSid);
@@ -118,36 +121,8 @@ if (JITTER < 1) {
               timeout: 210000,
             })
             .catch((e) => {});
-          //set display name & creds
-          await page.waitForNavigation();
-          if (CREDS) {
-            page.evaluate(
-              ({ sleep, email, token }) => {
-                (async () => {
-                  const t_o = 20000 / sleep;
-                  for (let i = 0; i < t_o; i++) {
-                    if (
-                      typeof APP !== "undefined" &&
-                      APP.store &&
-                      APP.store.state
-                    ) {
-                      if (APP.store.state.credentials.token) break;
-                      APP.store.update({ credentials: { email, token } });
-                    }
-                    await new Promise((r) => setTimeout(r, sleep));
-                  }
-                })();
-              },
-              {
-                sleep: 20,
-                ...CREDS[accId0],
-              }
-            );
-          }
           //wait for room assignment
           await page.waitForNavigation();
-          // //dirty trick to wait for assignment redir navigation
-          // await new Promise(r=>setTimeout(r,20000))
           //provide files for audio and data
           await Promise.race([
             new Promise(async (r, R) => {
@@ -270,7 +245,26 @@ async function login(page, accSid) {
   )
     return;
   //not logged in
-  if (AUTO_LOGIN === "auto") {
+  if (CREDS) {
+    page.evaluate(
+      ({ sleep, email, token }) => {
+        (async () => {
+          const t_o = 20000 / sleep;
+          for (let i = 0; i < t_o; i++) {
+            if (typeof APP !== "undefined" && APP.store && APP.store.state) {
+              if (APP.store.state.credentials.token) break;
+              APP.store.update({ credentials: { email, token } });
+            }
+            await new Promise((r) => setTimeout(r, sleep));
+          }
+        })();
+      },
+      {
+        sleep: 100,
+        ...CREDS[accSid],
+      }
+    );
+  } else if (AUTO_LOGIN === "auto") {
     console.log(`EMAIL: ${accSid}: wait for slot`);
     await emailQueue
       .add(async () => {
