@@ -108,11 +108,14 @@ if (JITTER < 1) {
         let page;
         try {
           page = await createPage(accSid, { browser });
-          // if (!browser) browser = page.browser()
+          // if (!browser) b9rowser = page.browser()
           if (AUTO_LOGIN === "auto" || AUTO_LOGIN === "manual" || CREDS) {
             //do login
-            console.log(`SLOT ${slot}: ${accSid}: login`);
-            await login(page, accSid);
+            await checkLogin(page, true);
+            do {
+              console.log(`SLOT ${slot}: ${accSid}: login`);
+              await login(page, accSid);
+            } while (!(await checkLogin(page)));
             console.log(`SLOT ${slot}: ${accSid}: login OK`);
           }
           console.log(`SLOT ${slot}: ${accSid}: spawn`);
@@ -229,8 +232,7 @@ if (JITTER < 1) {
   }
 })();
 
-async function login(page, accSid) {
-  //check if require login
+async function checkLogin(page, logout = false) {
   page
     .goto(`https://${HUBS_DOMAIN}`, {
       timeout: 70000,
@@ -241,21 +243,31 @@ async function login(page, accSid) {
   });
   //give time for login tag to update
   await new Promise((r) => setTimeout(r, 5000));
+  let elh;
   if (
-    (await page
-      .$("div[class^='index__sign-in__'] a span")
-      .then((elh) => elh.evaluate((el) => el.innerText))) !== "Sign In"
-  )
-    return;
+    ((elh = await page.$("div[class^='index__sign-in__'] a span")),
+    await elh.evaluate((el) => el.innerText)) !== "Sign In"
+  ) {
+    if (!logout) return true;
+    await elh.click();
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+}
+
+async function login(page, accSid) {
   //not logged in
   if (CREDS) {
-    page.evaluate(
+    // let isLogin;
+    await page.evaluate(
       ({ sleep, email, token }) => {
         (async () => {
           const t_o = 20000 / sleep;
           for (let i = 0; i < t_o; i++) {
             if (typeof APP !== "undefined" && APP.store && APP.store.state) {
-              if (APP.store.state.credentials.token) break;
+              if (APP.store.state.credentials.token) {
+                // isLogin = true;
+                break;
+              }
               APP.store.update({ credentials: { email, token } });
             }
             await new Promise((r) => setTimeout(r, sleep));
