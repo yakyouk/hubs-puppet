@@ -112,10 +112,13 @@ if (JITTER < 1) {
           if (AUTO_LOGIN === "auto" || AUTO_LOGIN === "manual" || CREDS) {
             //do login
             await checkLogin(page, true);
-            do {
+            let i = -1;
+            const maxLoginRetry=5
+            while (++i < maxLoginRetry && !(await checkLogin(page))) {
               console.log(`SLOT ${slot}: ${accSid}: login`);
               await login(page, accSid);
-            } while (!(await checkLogin(page)));
+            }
+            if (i===maxLoginRetry) throw new Error("login failed: too many retries")
             console.log(`SLOT ${slot}: ${accSid}: login OK`);
           }
           console.log(`SLOT ${slot}: ${accSid}: spawn`);
