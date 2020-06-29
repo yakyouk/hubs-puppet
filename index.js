@@ -64,7 +64,6 @@ if (CREDS) {
       ident,
     };
   }
-  console.log(CREDS);
 }
 const queuer = require("./unbuf-promise-queue");
 const puppeteer = require("puppeteer");
@@ -124,7 +123,7 @@ if (JITTER < 1) {
               throw new Error("login failed: too many retries");
             console.log(`SLOT ${slot}: ${accSid}: login OK`);
           }
-          console.log(`SLOT ${slot}: ${accSid}: spawn`);
+          console.log(`SLOT ${slot}: ${accSid}: spawn into ${HUBS_SID}`);
           page
             .goto(`https://${HUBS_DOMAIN}/${HUBS_SID}?bot=true&allow_multi`, {
               timeout: 210000,
