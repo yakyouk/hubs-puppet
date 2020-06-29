@@ -55,14 +55,16 @@ const inst = { min: Math.floor(SPAWN_COUNT * JITTER) || 1, max: SPAWN_COUNT };
 process.setMaxListeners(60);
 const CREDS = process.env.CREDS && {};
 if (CREDS) {
-  let accId0 = -1;
+  let baseIndex = -1;
   for (const c of process.env.CREDS.replace(/;$/, "").split(";")) {
-    accId0 = (accId0 + 1) % inst.max;
-    const accId = HUBS_FIRSTID + accId0;
-    const accSid = "" + accId.toString().padStart(4, "0");
-    const [email, token] = c.split(",");
-    CREDS[accSid] = { email, token };
+    const [email, token, ident] = c.split(",");
+    CREDS[getAccId(++baseIndex)] = {
+      email,
+      token,
+      ident,
+    };
   }
+  console.log(CREDS);
 }
 const queuer = require("./unbuf-promise-queue");
 const puppeteer = require("puppeteer");
@@ -87,14 +89,14 @@ if (JITTER < 1) {
 (async () => {
   //page array
   // const pages = new Map();
-  let accId0 = -1;
+  let baseIndex = -1;
   let browser;
   //main loop
   for (;;) {
     //get and lock available slot
-    accId0 = (accId0 + 1) % inst.max;
-    const accId = HUBS_FIRSTID + accId0;
-    const accSid = "" + accId.toString().padStart(4, "0");
+    baseIndex = (baseIndex + 1) % inst.max;
+    const _id = getAccId(baseIndex);
+    const accSid = (CREDS && CREDS[_id] && CREDS[_id].ident) || _id;
     console.log(`MAIN: ${accSid}: slot ${await mainQueue.waitOne()} available`);
     let freeUpSlot;
     const completionPromise = new Promise((r) => {
@@ -113,12 +115,13 @@ if (JITTER < 1) {
             //do login
             await checkLogin(page, true);
             let i = -1;
-            const maxLoginRetry=5
+            const maxLoginRetry = 5;
             while (++i < maxLoginRetry && !(await checkLogin(page))) {
               console.log(`SLOT ${slot}: ${accSid}: login`);
               await login(page, accSid);
             }
-            if (i===maxLoginRetry) throw new Error("login failed: too many retries")
+            if (i === maxLoginRetry)
+              throw new Error("login failed: too many retries");
             console.log(`SLOT ${slot}: ${accSid}: login OK`);
           }
           console.log(`SLOT ${slot}: ${accSid}: spawn`);
@@ -129,9 +132,9 @@ if (JITTER < 1) {
             .catch((e) => {});
           await page.waitForNavigation();
           //wait for room assignment
-          console.log("wait for assignment");
+          // console.log("wait for assignment");
           await page.waitForNavigation();
-          console.log("navigated to" + page.url());
+          console.log(`SLOT ${slot}: ${accSid}: navigated to ${page.url()}`);
           //provide files for audio and data
           await Promise.race([
             new Promise(async (r, R) => {
@@ -260,7 +263,11 @@ async function checkLogin(page, logout = false) {
 async function login(page, accSid) {
   //not logged in
   if (CREDS) {
-    // let isLogin;
+    //find corresponding CRED
+    const cred =
+      CREDS[accSid] ||
+      Object.entries(CREDS).find(([_, { ident }]) => ident === accSid)[1];
+    console.log(cred);
     await page.evaluate(
       ({ sleep, email, token }) => {
         (async () => {
@@ -268,7 +275,6 @@ async function login(page, accSid) {
           for (let i = 0; i < t_o; i++) {
             if (typeof APP !== "undefined" && APP.store && APP.store.state) {
               if (APP.store.state.credentials.token) {
-                // isLogin = true;
                 break;
               }
               APP.store.update({ credentials: { email, token } });
@@ -279,7 +285,8 @@ async function login(page, accSid) {
       },
       {
         sleep: 100,
-        ...CREDS[accSid],
+        email: cred.email,
+        token: cred.token,
       }
     );
   } else if (AUTO_LOGIN === "auto") {
@@ -490,4 +497,8 @@ async function createPage(context, options = {}) {
   //   dlg.accept();
   // });
   return page;
+}
+
+function getAccId(baseIndex) {
+  return "" + (HUBS_FIRSTID + baseIndex).toString().padStart(5, "0");
 }
