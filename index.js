@@ -267,7 +267,6 @@ async function login(page, accSid) {
     const cred =
       CREDS[accSid] ||
       Object.entries(CREDS).find(([_, { ident }]) => ident === accSid)[1];
-    console.log(cred);
     await page.evaluate(
       ({ sleep, email, token }) => {
         (async () => {
