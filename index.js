@@ -103,7 +103,7 @@ const _CREDS =
 const CREDS = _CREDS && {};
 if (CREDS) {
   let baseIndex = -1;
-  for (const c of _CREDS.replace(/;$/, "").split(";")) {
+  for (const c of _CREDS.replace(/\/$/, "").split("/")) {
     const [email, token, ident] = c.split(",");
     CREDS[getAccId(++baseIndex)] = {
       email,
