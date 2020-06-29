@@ -1,21 +1,46 @@
+"use strict";
 // pass pid to orchestrator
 console.log(`/VAR:PID:${process.pid}`);
-
-("use strict");
 console.log(
   "env: *HUBS_DOMAIN *HUBS_SID HUBS_EMAIL HUBS_FIRSTID HEADLESS=true/(false) AUTO_LOGIN=auto/manual/(disabled) CREDS=email1,token1;email2,token2 SPAWN_COUNT=(2) JITTER=(1) AUDIO_SAMPLES=(samples/sample000.mp3)"
 );
-const HEADLESS = process.env.HEADLESS === "true"; // true will hide the bot-spawing windows. default: false
+let _s;
+_s = "HEADLESS=";
+const HEADLESS =
+  ((process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+    process.env.HEADLESS) === "true"; // true will hide the bot-spawing windows. default: false
 // AUTO_LOGIN: auto: will open a visible window and automate yopmail login - yopmail is not hidden in case a captcha is required
 //              manual: you need to open yopmail and click links
 //              disabled (default): does not check for login
 // note that this will use the same provided HUBS_EMAIL for every bot
 // if you need separate accounts, use CREDS instead
-const AUTO_LOGIN = process.env.AUTO_LOGIN;
-const SPAWN_COUNT = parseInt(process.env.SPAWN_COUNT) || 2; // number of bots to spawn, min 1
-const JITTER = parseFloat(process.env.JITTER) || 1.0; // 0~1 spawnCnt * jitter gives the min number of bots
+_s = "AUTO_LOGIN=";
+const AUTO_LOGIN =
+  (process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+  process.env.AUTO_LOGIN;
+_s = "SPAWN_COUNT=";
+const SPAWN_COUNT =
+  parseInt(
+    (process.argv.find((s) => s.startsWith(_s)) &&
+      process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+      process.env.SPAWN_COUNT
+  ) || 2; // number of bots to spawn, min 1
+_s = "JITTER=";
+const JITTER =
+  parseFloat(
+    (process.argv.find((s) => s.startsWith(_s)) &&
+      process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+      process.env.JITTER
+  ) || 1.0; // 0~1 spawnCnt * jitter gives the min number of bots
 // audio samples
-const AUDIO_SAMPLES = process.env.AUDIO_SAMPLES
+_s = "AUDIO_SAMPLES=";
+const _AUDIO_SAMPLES =
+  (process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+  process.env.AUDIO_SAMPLES;
+const AUDIO_SAMPLES = _AUDIO_SAMPLES
   ? process.env.AUDIO_SAMPLES.split(",")
   : [
       "samples/sample000.mp3",
@@ -31,10 +56,27 @@ const AUDIO_SAMPLES = process.env.AUDIO_SAMPLES
 const MOVEMENT_SAMPLES = ["samples/bot-recording.json"];
 
 require("dotenv").config();
-const HUBS_DOMAIN = process.env.HUBS_DOMAIN;
-const HUBS_SID = process.env.HUBS_SID;
-const HUBS_EMAIL = process.env.HUBS_EMAIL;
-let HUBS_FIRSTID = parseInt(process.env.HUBS_FIRSTID) || undefined; //first bot id
+_s = "HUBS_DOMAIN=";
+const HUBS_DOMAIN =
+  (process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+  process.env.HUBS_DOMAIN;
+_s = "HUBS_SID=";
+const HUBS_SID =
+  (process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+  process.env.HUBS_SID;
+_s = "HUBS_EMAIL=";
+const HUBS_EMAIL =
+  (process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+  process.env.HUBS_EMAIL;
+let HUBS_FIRSTID =
+  parseInt(
+    (process.argv.find((s) => s.startsWith(_s)) &&
+      process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+      process.env.HUBS_FIRSTID
+  ) || undefined; //first bot id
 if (!HUBS_DOMAIN || !HUBS_SID) {
   console.error(
     "Missing required env variables: HUBS_DOMAIN=hubs_external_domain ; HUBS_SID=hubs_room_id"
@@ -53,10 +95,15 @@ if (
 HUBS_FIRSTID = HUBS_FIRSTID || 0;
 const inst = { min: Math.floor(SPAWN_COUNT * JITTER) || 1, max: SPAWN_COUNT };
 process.setMaxListeners(60);
-const CREDS = process.env.CREDS && {};
+_s = "CREDS=";
+const _CREDS =
+  (process.argv.find((s) => s.startsWith(_s)) &&
+    process.argv.find((s) => s.startsWith(_s)).substr(_s.length)) ||
+  process.env.CREDS;
+const CREDS = _CREDS && {};
 if (CREDS) {
   let baseIndex = -1;
-  for (const c of process.env.CREDS.replace(/;$/, "").split(";")) {
+  for (const c of _CREDS.replace(/;$/, "").split(";")) {
     const [email, token, ident] = c.split(",");
     CREDS[getAccId(++baseIndex)] = {
       email,
